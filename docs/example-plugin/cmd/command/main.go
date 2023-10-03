@@ -8,6 +8,12 @@ import (
 	"github.com/spf13/viper"
 )
 
+// NewPlugin is how the plugin loader
+// fetches the code from the c-shared object
+func NewPlugin() *Plugin {
+	return &Plugin{}
+}
+
 type Plugin struct {
 	name string
 }
@@ -35,4 +41,7 @@ func (p *Plugin) GetName() string {
 }
 
 // dont use this, it will be ignored and nothing will happen
-func main() {}
+func main() {
+	plugin := NewPlugin()
+	plugin.GetName()
+}

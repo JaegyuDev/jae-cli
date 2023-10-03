@@ -7,7 +7,9 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"plugin"
+	"reflect"
+	"syscall"
+	"unsafe"
 )
 
 var (
@@ -72,27 +74,46 @@ func initializePlugins(_reg *registry.Registry) {
 				continue
 			}
 
-			open, err := plugin.Open(path)
-			if err != nil {
-				logger.Warn("error opening plugin", "path", path, "error", err.Error())
-				continue
-			}
+			if plugin, ok := loadPlugin(path); ok {
+				_reg.RegisterPlugin(plugin)
 
-			lookup, err := open.Lookup("Plugin")
-			if err != nil {
-				logger.Warn("error looking up 'Plugin' symbol in plugin", "path", path, "error", err.Error())
-				continue
 			}
-
-			var loadPlugin registry.Plugin
-			var ok bool
-			loadPlugin, ok = lookup.(registry.Plugin)
-			if !ok {
-				logger.Warn("loaded plugin is not a valid registry.Plugin", "path", path)
-				continue
-			}
-
-			_reg.RegisterPlugin(loadPlugin)
 		}
 	}
 }
+
+func loadPlugin(path string) (registry.Plugin, bool) {
+	lib, err := syscall.LoadLibrary(path)
+	if err != nil {
+		logger.Info("Failed to load file as a library", "path", path, "error", err)
+	}
+	defer syscall.FreeLibrary(lib)
+
+	// we need to load the symbol for the plugin struct
+	symPlugin, err := syscall.GetProcAddress(lib, "NewPlugin")
+	if err != nil {
+		logger.Info("Failed to load NewPlugin symbol from the library", "path", path, "error", err)
+	}
+
+	// we convert the symbol to a function pointer (?)
+	pluginPtr := *(*unsafe.Pointer)(unsafe.Pointer(&symPlugin))
+	newPluginFuncType := reflect.FuncOf([]reflect.Type{}, []reflect.Type{reflect.TypeOf((*registry.Plugin)(nil)).Elem()}, false)
+
+	// This is where i want to change the pluginPtr to a function I can call:
+	newPluginFunc := reflect.NewAt(newPluginFuncType, pluginPtr)
+
+	// Call NewPlugin function to create an instance of Plugin
+	pluginInstance := newPluginFunc.Call(nil)
+
+	if plugin, ok := pluginInstance[0].Interface().(registry.Plugin); ok {
+		return plugin, true
+	}
+
+	return nil, false
+}
+
+//
+//// check if it implements the interface
+//if funcValue.Type().Implements(reflect.TypeOf((*registry.Plugin)(nil)).Elem()) {
+//return funcValue.Interface().(registry.Plugin), true
+//}
