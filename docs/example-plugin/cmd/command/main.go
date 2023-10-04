@@ -2,19 +2,22 @@ package main
 
 import (
 	"fmt"
-	"log/slog"
-
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"log/slog"
 )
 
 type Plugin struct {
 	name string
 }
 
-func (p *Plugin) Setup(cmd *cobra.Command, vp *viper.Viper, l *slog.Logger) {
-	p.name = "Demo Plugin"
+func NewPlugin() Plugin {
+	return Plugin{
+		"Demo Plugin",
+	}
+}
 
+func (p *Plugin) Setup(cmd *cobra.Command, vp *viper.Viper, l *slog.Logger) {
 	myCmd := &cobra.Command{
 		Use:   "example",
 		Short: "example demo",

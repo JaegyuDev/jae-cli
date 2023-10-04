@@ -78,21 +78,26 @@ func initializePlugins(_reg *registry.Registry) {
 				continue
 			}
 
-			lookup, err := open.Lookup("Plugin")
+			// Load the NewPlugin function
+			newPluginSym, err := open.Lookup("NewPlugin")
 			if err != nil {
-				logger.Warn("error looking up 'Plugin' symbol in plugin", "path", path, "error", err.Error())
+				logger.Warn("error looking up 'NewPlugin' symbol in plugin", "path", path, "error", err.Error())
 				continue
 			}
 
-			var loadPlugin registry.Plugin
-			var ok bool
-			loadPlugin, ok = lookup.(registry.Plugin)
+			// fails here. Probably fucking up when doing the lookup.
+			// Cast the loaded symbol to the NewPlugin function
+			newPluginFunc, ok := newPluginSym.(func() registry.Plugin)
 			if !ok {
-				logger.Warn("loaded plugin is not a valid registry.Plugin", "path", path)
+				logger.Warn("loaded symbol 'NewPlugin' is not a valid function")
 				continue
 			}
 
-			_reg.RegisterPlugin(loadPlugin)
+			// Call the NewPlugin function to create an instance of your plugin
+			loadedPlugin := newPluginFunc()
+
+			// Register the loaded plugin
+			_reg.RegisterPlugin(loadedPlugin)
 		}
 	}
 }
