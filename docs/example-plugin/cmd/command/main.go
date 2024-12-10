@@ -22,7 +22,7 @@ func (p *Plugin) Setup(cmd *cobra.Command, vp *viper.Viper, l *slog.Logger) {
 			// logic here.
 			// my only request is that you don't modify the base configs.
 			// you can add your own inside of the programs config paths, which will be provided through viper.
-
+				
 			fmt.Println("HELLO WORLD!!")
 		},
 	}
